@@ -17,7 +17,7 @@ This web application provides a browser-based preview of what your EPD47 e-paper
 - **Entity Configuration**: Select which Home Assistant entities to display via a user-friendly settings page
 - **OTA Updates**: Upload firmware updates to the ESP32 device over-the-air without physical access
 - **Self-Hostable**: Docker container ready for Proxmox or any Docker-compatible deployment
-- **Real-time Updates**: Dashboard refreshes automatically (weather/hourly, clock/minute, quotes every 3 hours)
+- **Low-Overhead Updates**: Dashboard refreshes only when needed (weather/hourly, date at midnight, clock/minute, quotes every 6 hours)
 
 ## Prerequisites
 
@@ -120,7 +120,7 @@ The main dashboard (`/`) displays:
 - Clock (updates every minute)
 - Weather information
 - Current date
-- Daily quote (rotates every 3 hours)
+- Daily quote (rotates every 6 hours)
 - Todo list (items due today)
 - Upcoming calendar events
 - Mini calendar (current week)

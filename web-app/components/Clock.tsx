@@ -7,11 +7,26 @@ export default function Clock() {
   const [time, setTime] = useState(new Date());
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setTime(new Date());
-    }, 1000);
+    let timer: number | undefined;
 
-    return () => clearInterval(timer);
+    const scheduleTick = () => {
+      const now = new Date();
+      setTime(now);
+
+      const nextMinute = new Date(now);
+      nextMinute.setSeconds(0, 0);
+      nextMinute.setMinutes(nextMinute.getMinutes() + 1);
+
+      timer = window.setTimeout(scheduleTick, nextMinute.getTime() - now.getTime());
+    };
+
+    scheduleTick();
+
+    return () => {
+      if (timer !== undefined) {
+        clearTimeout(timer);
+      }
+    };
   }, []);
 
   return (
@@ -20,4 +35,3 @@ export default function Clock() {
     </div>
   );
 }
-

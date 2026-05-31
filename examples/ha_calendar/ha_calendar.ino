@@ -240,6 +240,11 @@ unsigned long wifiLingerUntil = 0; // keep WiFi up briefly after fetches
 
 bool debugMode = false; // true when BUTTON_1 held at boot, keeps device awake for OTA/debug
 
+static void redrawQuoteSection() {
+  epd_poweron();
+  drawQuote(quotes, currentQuoteIndex, quoteArea);
+  epd_poweroff();
+}
 
 void forceWifiOff() {
   Serial.println("Forcing WiFi off");
@@ -947,8 +952,9 @@ void loop() {
     lastWeatherUpdate = now;
 
     Serial.println("Updating Weather...");
-    fetchWeather(currentWeather);
-    updateWeatherSection();
+    if (fetchWeather(currentWeather)) {
+      updateWeatherSection();
+    }
   }
 
   // Calendar and Todo update every 6 hours
@@ -957,9 +963,11 @@ void loop() {
     lastCalTodoUpdate = now;
 
     Serial.println("Updating Calendar and Todo...");
-    fetchTodos(todoList);
-    fetchCalendar(calendarEvents);
-    updateCalendarTodoSections();
+    bool todoChanged = fetchTodos(todoList);
+    bool calendarChanged = fetchCalendar(calendarEvents);
+    if (todoChanged || calendarChanged) {
+      updateCalendarTodoSections();
+    }
   }
 
   // Clock removed to save refreshes
@@ -968,9 +976,9 @@ void loop() {
   if (lastQuoteFetch == 0 || (now - lastQuoteFetch) > quoteFetchInterval) {
     lastQuoteFetch = now;
     Serial.println("Fetching new quotes...");
-    fetchQuotes(quotes, currentQuoteIndex);
-    // Redraw full dashboard to show first quote
-    drawDashboard();
+    if (fetchQuotes(quotes, currentQuoteIndex)) {
+      redrawQuoteSection();
+    }
   }
 
   // Quote rotation update (every 6 hours)

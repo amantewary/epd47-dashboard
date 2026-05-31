@@ -2,5 +2,6 @@
 
 #include "types.h"
 
-// Fetch weather from Home Assistant into currentWeather
-void fetchWeather(WeatherData &currentWeather);
+// Fetch weather from Home Assistant into currentWeather.
+// Returns true when the visible display data changed.
+bool fetchWeather(WeatherData &currentWeather);

@@ -15,7 +15,20 @@ std::vector<String> wrapText(const String &text, int maxChars);
 void epd_poweron();
 void epd_poweroff();
 
-void fetchQuotes(std::vector<QuoteData> &quotes, int &currentQuoteIndex) {
+static bool quotesEqual(const std::vector<QuoteData> &a,
+                        const std::vector<QuoteData> &b) {
+  if (a.size() != b.size()) {
+    return false;
+  }
+  for (size_t i = 0; i < a.size(); ++i) {
+    if (a[i].author != b[i].author || a[i].text != b[i].text) {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool fetchQuotes(std::vector<QuoteData> &quotes, int &currentQuoteIndex) {
   Serial.println("=== fetchQuotes() called ===");
   String url = buildHaUrl(String("/api/states/") + String(ENTITY_QUOTE));
   Serial.print("Quote URL: ");
@@ -25,13 +38,10 @@ void fetchQuotes(std::vector<QuoteData> &quotes, int &currentQuoteIndex) {
 
   if (!fetchJson(url, haArrayDoc)) {
     Serial.println("ERROR: Quote fetch failed - fetchJson returned false");
-    return;
+    return false;
   }
 
   Serial.println("Quote JSON fetched successfully");
-
-  // Clear existing quotes
-  quotes.clear();
 
   // Parse the quotes/entries array from attributes (accept both keys)
   JsonArray entries = haArrayDoc["attributes"]["quotes"].as<JsonArray>();
@@ -40,12 +50,15 @@ void fetchQuotes(std::vector<QuoteData> &quotes, int &currentQuoteIndex) {
   }
   if (entries.isNull()) {
     Serial.println("ERROR: No 'quotes' or 'entries' array found in attributes");
-    return;
+    return false;
   }
 
   Serial.print("Found ");
   Serial.print(entries.size());
   Serial.println(" quotes");
+
+  std::vector<QuoteData> newQuotes;
+  newQuotes.reserve(entries.size());
 
   // Parse each entry
   for (JsonObject entry : entries) {
@@ -77,7 +90,7 @@ void fetchQuotes(std::vector<QuoteData> &quotes, int &currentQuoteIndex) {
 
     // Only add if we have valid text
     if (quote.text.length() > 0) {
-      quotes.push_back(quote);
+      newQuotes.push_back(quote);
       Serial.print("Added quote from ");
       Serial.print(quote.author);
       Serial.print(": ");
@@ -86,13 +99,17 @@ void fetchQuotes(std::vector<QuoteData> &quotes, int &currentQuoteIndex) {
   }
 
   Serial.print("Total quotes stored: ");
-  Serial.println(quotes.size());
+  Serial.println(newQuotes.size());
 
-  // Reset current quote index
-  currentQuoteIndex = 0;
+  bool changed = !quotesEqual(quotes, newQuotes);
+  if (changed) {
+    quotes = newQuotes;
+    currentQuoteIndex = 0;
+  }
 
   Serial.println("=== fetchQuotes() complete ===");
   disableWiFiIfAllowed();
+  return changed;
 }
 
 void drawQuote(const std::vector<QuoteData> &quotes, int currentQuoteIndex,

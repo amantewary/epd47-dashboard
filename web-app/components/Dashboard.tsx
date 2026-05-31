@@ -118,20 +118,32 @@ export default function Dashboard({ config }: DashboardProps) {
 
   useEffect(() => {
     fetchData();
-    
-    // Refresh weather, todos, calendars every hour
+
+    // Refresh weather, todos, and calendars every hour.
     const hourlyInterval = setInterval(() => {
       fetchData();
     }, 60 * 60 * 1000);
 
-    // Update date every minute
-    const dateInterval = setInterval(() => {
-      setCurrentDate(new Date());
-    }, 60 * 1000);
+    // The displayed date changes once per day, so refresh it at midnight.
+    let dateTimeout: number | undefined;
+    const scheduleDateRefresh = () => {
+      const now = new Date();
+      const nextMidnight = new Date(now);
+      nextMidnight.setHours(24, 0, 0, 0);
+
+      const delay = nextMidnight.getTime() - now.getTime();
+      dateTimeout = window.setTimeout(() => {
+        setCurrentDate(new Date());
+        scheduleDateRefresh();
+      }, delay);
+    };
+    scheduleDateRefresh();
 
     return () => {
       clearInterval(hourlyInterval);
-      clearInterval(dateInterval);
+      if (dateTimeout !== undefined) {
+        clearTimeout(dateTimeout);
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [config]);

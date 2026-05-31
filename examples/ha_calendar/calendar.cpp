@@ -21,7 +21,21 @@ static String getISOTime(time_t t) {
   return String(buf);
 }
 
-void fetchCalendar(std::vector<CalendarEvent> &calendarEvents) {
+static bool calendarsEqual(const std::vector<CalendarEvent> &a,
+                           const std::vector<CalendarEvent> &b) {
+  if (a.size() != b.size()) {
+    return false;
+  }
+  for (size_t i = 0; i < a.size(); ++i) {
+    if (a[i].title != b[i].title || a[i].startTime != b[i].startTime ||
+        a[i].date != b[i].date || a[i].isoDateTime != b[i].isoDateTime) {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool fetchCalendar(std::vector<CalendarEvent> &calendarEvents) {
   Serial.println("=== fetchCalendar() called ===");
   std::vector<CalendarEvent> newEvents;
   haArrayDoc.clear();
@@ -169,6 +183,10 @@ void fetchCalendar(std::vector<CalendarEvent> &calendarEvents) {
   Serial.println(newEvents.size());
   Serial.println("=== fetchCalendar() complete ===");
 
-  calendarEvents = newEvents;
+  bool changed = !calendarsEqual(calendarEvents, newEvents);
+  if (changed) {
+    calendarEvents = newEvents;
+  }
   disableWiFiIfAllowed();
+  return changed;
 }

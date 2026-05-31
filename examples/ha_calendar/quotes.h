@@ -5,8 +5,9 @@
 #include <Arduino.h>
 #include <vector>
 
-// Fetch quotes from Home Assistant and reset the current index to 0
-void fetchQuotes(std::vector<QuoteData> &quotes, int &currentQuoteIndex);
+// Fetch quotes from Home Assistant and reset the current index to 0 if the
+// quote set changed. Returns true when the visible display data changed.
+bool fetchQuotes(std::vector<QuoteData> &quotes, int &currentQuoteIndex);
 
 // Draw the current quote within the given area (handles wrapping and truncation)
 void drawQuote(const std::vector<QuoteData> &quotes, int currentQuoteIndex,

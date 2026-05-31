@@ -23,11 +23,25 @@ static String getTodayDateString() {
   return String(timeStringBuff);
 }
 
-void fetchTodos(std::vector<TodoItem> &todoList) {
+static bool todosEqual(const std::vector<TodoItem> &a,
+                       const std::vector<TodoItem> &b) {
+  if (a.size() != b.size()) {
+    return false;
+  }
+  for (size_t i = 0; i < a.size(); ++i) {
+    if (a[i].text != b[i].text || a[i].dueDate != b[i].dueDate ||
+        a[i].overdue != b[i].overdue) {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool fetchTodos(std::vector<TodoItem> &todoList) {
   // 1. Get current date for filtering
   String today = getTodayDateString();
   if (today.length() == 0) {
-    return;
+    return false;
   }
 
   std::vector<TodoItem> overdueTodos;
@@ -103,6 +117,10 @@ void fetchTodos(std::vector<TodoItem> &todoList) {
     newTodos.resize(MAX_TODOS);
   }
 
-  todoList = newTodos;
+  bool changed = !todosEqual(todoList, newTodos);
+  if (changed) {
+    todoList = newTodos;
+  }
   disableWiFiIfAllowed();
+  return changed;
 }
