@@ -310,9 +310,23 @@ static void epd_draw_pixel_area(int x, int y, uint8_t color, uint8_t *framebuffe
 
 #if ESP_IDF_VERSION_MAJOR >= 5 // IDF 5+
 static UINT feed_buffer(JDEC *jd, BYTE *buff, UINT nd)
+{
+    uint8_t *device = (uint8_t *)jd->device;
+    UINT count = 0;
+    while (count < nd)
+    {
+        if (buff != NULL)
+        {
+            *buff++ = device[jpeg_buf_pos];
+        }
+        count++;
+        jpeg_buf_pos++;
+    }
+
+    return count;
+}
 #else
 static uint32_t feed_buffer(JDEC *jd, uint8_t *buff, uint32_t nd)
-#endif
 {
     uint8_t *device = (uint8_t *)jd->device;
     uint32_t count = 0;
@@ -328,6 +342,7 @@ static uint32_t feed_buffer(JDEC *jd, uint8_t *buff, uint32_t nd)
 
     return count;
 }
+#endif
 
 #if ESP_IDF_VERSION_MAJOR >= 5 // IDF 5+
 static UINT tjd_output(JDEC *jd, void *bitmap, JRECT *rect)

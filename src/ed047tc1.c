@@ -7,10 +7,14 @@
 #include "i2s_data_bus.h"
 #include "rmt_pulse.h"
 
+#if ESP_IDF_VERSION_MAJOR >= 5
+#include <soc/gpio_struct.h>  // GPIO.out_w1ts / GPIO.out_w1tc — required in IDF 5.x
+#else
+#include <hal/gpio_ll.h>
+#endif
 #include <xtensa/core-macros.h>
 
 #include <string.h>
-#include <hal/gpio_ll.h>
 
 /******************************************************************************/
 /***        macro definitions                                               ***/

@@ -34,7 +34,6 @@
 #include <FFat.h>
 #include "logo.h"
 #include "utilities.h"
-#include "secrets.h"
 
 
 // #define USE_SD
@@ -48,9 +47,9 @@
 
 #define DBG_OUTPUT_PORT Serial
 
-const char *ssid = WIFI_SSID;
-const char *password = WIFI_PASSWORD;
-const char *host = HOST_NAME;
+const char *ssid = "Artemis_2.4GEXT";
+const char *password = "19E6942496D6";
+const char *host = "lilygo";
 
 WebServer server(80);
 static bool hasFILE_SYSTEM = false;

@@ -10,3 +10,6 @@
 # New version touch Panel (Style3)
 
 ![style2](./images/style3.jpg)
+
+Housing screw specifications: M1.5\*5
+PCB mounting screw specifications: M2\*4

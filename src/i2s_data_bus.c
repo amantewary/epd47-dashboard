@@ -371,6 +371,9 @@ void i2s_bus_init(i2s_bus_config *cfg)
     esp_lcd_i80_bus_config_t bus_config = {
         .dc_gpio_num = cfg->start_pulse,
         .wr_gpio_num = cfg->clock,
+#if ESP_IDF_VERSION_MAJOR >= 5
+        .clk_src = LCD_CLK_SRC_DEFAULT,  // required in IDF 5.x; omitting causes "unknown clock source 0" panic
+#endif
         .data_gpio_nums = {
             cfg->data_6,
             cfg->data_7,
