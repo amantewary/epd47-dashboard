@@ -306,8 +306,8 @@ static int32_t utf8_len(const uint8_t ch)
         ++len;
     }
     if (len > 4)
-    { /* Malformed leading byte */
-        assert("invalid unicode.");
+    { /* Malformed leading byte — skip it */
+        return 1;
     }
     return len;
 }
@@ -318,6 +318,14 @@ static uint32_t next_cp(uint8_t **string)
     if (**string == 0) return 0;
 
     int32_t bytes = utf8_len(**string);
+    if (bytes == 0 || bytes > 4)
+    {
+        /* Invalid UTF-8 leading byte (e.g. bare continuation byte 0xB0).
+           Skip one byte and return the Unicode replacement character. */
+        (*string)++;
+        return 0xFFFD;
+    }
+
     uint8_t *chr = *string;
     *string += bytes;
     int32_t shift = utf[0]->bits_stored * (bytes - 1);

@@ -1063,7 +1063,7 @@ static void IRAM_ATTR provide_out(OutputParams *params)
             memset(line, 255, EPD_WIDTH / 2);
         }
     }
-
+    vTaskDelay((const TickType_t )5);
     xSemaphoreGive(params->done_smphr);
     vTaskDelay(portMAX_DELAY);
 }

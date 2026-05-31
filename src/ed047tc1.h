@@ -10,6 +10,7 @@ extern "C" {
 /******************************************************************************/
 
 #include <driver/gpio.h>
+#include <esp_attr.h>   // IRAM_ATTR — no longer transitively included in ESP32 Arduino core 3.x
 
 #include <stdint.h>
 

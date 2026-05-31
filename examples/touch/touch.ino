@@ -180,7 +180,7 @@ void loop()
         return;
     }
 
-    uint8_t touched = touch.getPoint(&x, &y);
+    uint8_t touched = touch.getPoint(&x, &y, 1);
     if (touched) {
         // Serial.printf("X:%d Y:%d\n", x, y);
         if ((x > 600 && x < 720) && (y > 450 && y < 510)) {
