@@ -1,6 +1,8 @@
-<h1 align = "center">🌟LilyGo EPD47 🌟</h1>
+<h1 align = "center">🌟EPD47 Dashboard (Standalone)🌟</h1>
 
 <!-- ## **English | [中文](./README_CN.MD)** -->
+
+This repository is a standalone project derived from LilyGo EPD47, with custom firmware and a companion web dashboard.
 
 ## News
 
@@ -38,7 +40,7 @@ examples/
 1. Install [Visual Studio Code](https://code.visualstudio.com/) and [Python](https://www.python.org/)
 2. Search for the `PlatformIO` plugin in the `VisualStudioCode` extension and install it.
 3. After the installation is complete, you need to restart `VisualStudioCode`
-4. After restarting `VisualStudioCode`, select `File` in the upper left corner of `VisualStudioCode` -> `Open Folder` -> select the `LilyGo-EPD47` directory
+4. After restarting `VisualStudioCode`, select `File` in the upper left corner of `VisualStudioCode` -> `Open Folder` -> select the `epd47-dashboard` directory
 5. Wait for the installation of third-party dependent libraries to complete
 6. Click on the `platformio.ini` file, and in the `platformio` column
 7. Uncomment one of the lines `src_dir = xxxx` to make sure only one line works
