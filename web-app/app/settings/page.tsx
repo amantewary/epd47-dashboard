@@ -31,6 +31,8 @@ export default function SettingsPage() {
   const watchedHost = watch('host');
   const watchedPort = watch('port');
   const watchedToken = watch('token');
+  const watchedTodoEntities = watch('todoEntities') || [];
+  const watchedCalendarEntities = watch('calendarEntities') || [];
 
   // Load saved config
   useEffect(() => {
@@ -43,8 +45,12 @@ export default function SettingsPage() {
         reset(merged);
         // Seed available entity lists with saved selections so dropdowns keep context
         setAvailableEntities((prev) => ({
-          todos: prev.todos,
-          calendars: prev.calendars,
+          todos: merged.todoEntities.length
+            ? Array.from(new Set([...merged.todoEntities, ...prev.todos]))
+            : prev.todos,
+          calendars: merged.calendarEntities.length
+            ? Array.from(new Set([...merged.calendarEntities, ...prev.calendars]))
+            : prev.calendars,
           weather: parsed.weatherEntity
             ? Array.from(new Set([parsed.weatherEntity, ...prev.weather]))
             : prev.weather,
@@ -116,8 +122,24 @@ export default function SettingsPage() {
       }
 
       const data = await response.json();
+      const mergedTodos = data.todos || [];
+      const mergedCalendars = data.calendars || [];
       const mergedWeather = data.weather || [];
       const mergedSensors = data.sensors || [];
+
+      // Keep saved/current selections in the list even if HA response is missing them
+      for (const entity of savedConfig?.todoEntities || []) {
+        if (!mergedTodos.includes(entity)) mergedTodos.unshift(entity);
+      }
+      for (const entity of watchedTodoEntities) {
+        if (!mergedTodos.includes(entity)) mergedTodos.unshift(entity);
+      }
+      for (const entity of savedConfig?.calendarEntities || []) {
+        if (!mergedCalendars.includes(entity)) mergedCalendars.unshift(entity);
+      }
+      for (const entity of watchedCalendarEntities) {
+        if (!mergedCalendars.includes(entity)) mergedCalendars.unshift(entity);
+      }
 
       // Keep saved selections in the list even if HA response is missing them
       if (savedConfig?.weatherEntity && !mergedWeather.includes(savedConfig.weatherEntity)) {
@@ -128,8 +150,8 @@ export default function SettingsPage() {
       }
 
       setAvailableEntities({
-        todos: data.todos || [],
-        calendars: data.calendars || [],
+        todos: mergedTodos,
+        calendars: mergedCalendars,
         weather: mergedWeather,
         sensors: mergedSensors,
       });
@@ -137,8 +159,8 @@ export default function SettingsPage() {
       console.error('Failed to fetch entities:', err);
       setError(`Failed to fetch entities: ${err.message}. Please check your Home Assistant connection and token.`);
       setAvailableEntities({
-        todos: [],
-        calendars: [],
+        todos: Array.from(new Set([...(savedConfig?.todoEntities || []), ...watchedTodoEntities])),
+        calendars: Array.from(new Set([...(savedConfig?.calendarEntities || []), ...watchedCalendarEntities])),
         weather: savedConfig?.weatherEntity ? [savedConfig.weatherEntity] : [],
         sensors: savedConfig?.quoteEntity ? [savedConfig.quoteEntity] : [],
       });

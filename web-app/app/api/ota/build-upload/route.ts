@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import path from 'path';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -18,10 +19,7 @@ export async function POST(req: NextRequest) {
     return new Response('Missing deviceIp (set in settings or body)', { status: 400 });
   }
 
-  const projectRoot = /*turbopackIgnore: true*/ process.env.PIO_PROJECT_ROOT;
-  if (!projectRoot) {
-    return new Response('Missing PIO_PROJECT_ROOT (absolute path to the PlatformIO project root)', { status: 500 });
-  }
+  const projectRoot = /*turbopackIgnore: true*/ process.env.PIO_PROJECT_ROOT || path.resolve(process.cwd(), '..');
 
   const args = ['run', '-e', envName, '-t', 'upload'];
 

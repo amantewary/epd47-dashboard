@@ -86,14 +86,19 @@ ${renderEntityDefines('CALENDARS', calendarEntities)}
 `;
 }
 
-export async function POST(request: NextRequest) {
-  const projectRoot = process.env.PIO_PROJECT_ROOT;
-  if (!projectRoot) {
-    return NextResponse.json(
-      { error: 'Missing PIO_PROJECT_ROOT; cannot update firmware config.' },
-      { status: 500 }
-    );
+function resolveProjectRoot(): string {
+  const configuredRoot = process.env.PIO_PROJECT_ROOT;
+  const fallbackRoot = path.resolve(process.cwd(), '..');
+
+  if (!configuredRoot) {
+    return fallbackRoot;
   }
+
+  return configuredRoot;
+}
+
+export async function POST(request: NextRequest) {
+  const projectRoot = resolveProjectRoot();
 
   const config = await request.json().catch(() => null) as AppConfig | null;
   if (!config || !config.weatherEntity || !config.quoteEntity) {
