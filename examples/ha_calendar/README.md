@@ -184,6 +184,109 @@ If you want the firmware to read Home Assistant state from retained MQTT topics 
 3. Or run `python3 scripts/create_ha_automations.py --yaml` directly if you want the same output without the shell wrapper.
 4. Copy the generated automations from `examples/ha_calendar/HA-MQTT-AUTOMATIONS.yaml` if you prefer a static reference.
 
+#### MQTT Payload Notes
+
+- `weather`: expected object, e.g. `{"state":"partlycloudy","temperature":22.5}`
+- `todos`: expected array of todo items
+- `quotes`: expected array of quote entries
+- `calendar`: supports both payload styles for `start`:
+  - string style: `{"summary":"Meeting","start":"2026-06-01T09:00:00"}`
+  - nested style: `{"summary":"Meeting","start":{"dateTime":"2026-06-01T09:00:00"}}`
+  - all-day nested style: `{"summary":"Holiday","start":{"date":"2026-06-01"}}`
+
+### Architecture Diagram
+
+```mermaid
+graph TD
+  User[Home Assistant User] --> HA[Home Assistant]
+
+  subgraph EPD47[EPD47 Firmware on ESP32-S3]
+    Scheduler[Update Scheduler]
+    MqttClient[mqtt_client.cpp]
+    HaClient[ha_client.cpp]
+    Render[Display Renderer]
+    Power[Power Manager / Deep Sleep]
+    Ota[ArduinoOTA Handler]
+  end
+
+  Scheduler --> MqttClient
+  Scheduler --> HaClient
+  MqttClient --> Render
+  HaClient --> Render
+  Scheduler --> Power
+  Scheduler --> Ota
+
+  HA --> REST[HA REST API]
+  HA --> Broker[MQTT Broker]
+
+  MqttClient <--> Broker
+  HaClient <--> REST
+  Scheduler --> NTP[NTP Server]
+```
+
+### Network Diagram
+
+```mermaid
+graph LR
+  Laptop[Developer Laptop]
+  Router[WiFi Router / LAN]
+  Device[EPD47 Device]
+  HAHost[Home Assistant Host]
+  Broker[Mosquitto Broker]
+  Internet[Internet NTP Pool]
+
+  Laptop <-- OTA Upload --> Router
+  Device <--> Router
+  HAHost <--> Router
+  Broker <--> Router
+
+  HAHost --> Broker
+  Device <--> Broker
+  Device <--> HAHost
+  Device --> Internet
+```
+
+### Sequence Diagram
+
+```mermaid
+sequenceDiagram
+  participant EPD as EPD47 Firmware
+  participant WiFi as WiFi AP
+  participant NTP as NTP Server
+  participant MQTT as MQTT Broker
+  participant HA as Home Assistant REST API
+  participant EPDSP as E-Paper Display
+
+  EPD->>WiFi: Connect
+  EPD->>NTP: Sync time
+
+  alt USE_MQTT=1
+    EPD->>MQTT: Connect + subscribe retained topics
+    MQTT-->>EPD: weather/todos/calendar/quotes payloads
+    alt Missing topic or parse error
+      EPD->>HA: Fetch missing/invalid data via REST
+      HA-->>EPD: JSON responses
+    else Valid payloads
+      Note over EPD: Use MQTT payloads (including valid empty arrays)
+    end
+  else USE_MQTT=0
+    EPD->>HA: Fetch weather/todos/calendar/quotes via REST
+    HA-->>EPD: JSON responses
+  end
+
+  EPD->>EPDSP: Draw dashboard
+
+  alt Battery-optimized mode
+    EPD->>EPD: Enter deep sleep
+  else Debug/OTA mode
+    loop While awake
+      EPD->>MQTT: Persistent loop for push updates
+      MQTT-->>EPD: Updated retained topic
+      EPD->>EPDSP: Partial redraw changed sections only
+    end
+  end
+```
+
 ### Home Assistant Setup
 
 #### Quote Sensor (Optional)

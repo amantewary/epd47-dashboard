@@ -253,15 +253,23 @@ bool parseMqttCalendar(const String &json, std::vector<CalendarEvent> &events) {
   JsonArray arr = doc.as<JsonArray>();
   if (arr.isNull()) return false;
 
-  // Get time bounds (7 days from now)
-  time_t now;
-  time(&now);
-  time_t end = now + 7 * 24 * 3600;
+  auto getStartIso = [](JsonVariantConst v) -> String {
+    if (v["start"].is<String>()) {
+      return v["start"].as<String>();
+    }
+    if (v["start"]["dateTime"].is<String>()) {
+      return v["start"]["dateTime"].as<String>();
+    }
+    if (v["start"]["date"].is<String>()) {
+      return v["start"]["date"].as<String>();
+    }
+    return "";
+  };
 
   std::vector<CalendarEvent> newEvents;
 
   for (JsonVariant v : arr) {
-    String iso = v["start"].as<String>();
+    String iso = getStartIso(v);
     if (iso.length() == 0) continue;
 
     // Try dateTime first (full ISO), fall back to date (all-day)
