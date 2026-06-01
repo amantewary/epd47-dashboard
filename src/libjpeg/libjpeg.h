@@ -1,6 +1,6 @@
 
-#ifndef LIB_LPEG_H
-#define LIB_LPEG_H
+#ifndef LIB_JPEG_H
+#define LIB_JPEG_H
 
 #ifdef __cplusplus
 extern "C" {

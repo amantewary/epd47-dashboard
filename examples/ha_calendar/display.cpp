@@ -54,12 +54,15 @@ std::vector<String> wrapText(const String &text, int maxChars) {
 
     int lastSpace = text.lastIndexOf(' ', end);
     if (lastSpace <= start) {
-      // No space found in range; force break at maxChars
       lines.push_back(text.substring(start, end));
       start = end;
     } else {
       lines.push_back(text.substring(start, lastSpace));
-      start = lastSpace + 1; // Skip space
+      start = lastSpace + 1;
+      // Skip any remaining consecutive spaces so next line doesn't start with spaces
+      while (start < text.length() && text.charAt(start) == ' ') {
+        start++;
+      }
     }
   }
 
@@ -120,12 +123,12 @@ void drawList(const Rect_t &area, const std::vector<String> &lines,
 
     // Draw icon if needed (for todos)
     if (drawIcons && itemIndex < (int)lines.size()) {
-      bool isChecked = (line.length() > 0 && line[0] == 'X');
+      bool isOverdue = (line.length() > 0 && line[0] == '!');
       int32_t icon_x = cursor_x;
       int32_t icon_y = cursor_y - icon_checkbox_height - 2;
 
-      // Draw checkbox icon
-      if (isChecked) {
+      // Draw checkbox icon (overdue items use checked box)
+      if (isOverdue) {
         drawBitmapIcon(icon_x, icon_y, icon_checkbox_checked_data,
                        icon_checkbox_checked_width,
                        icon_checkbox_checked_height);

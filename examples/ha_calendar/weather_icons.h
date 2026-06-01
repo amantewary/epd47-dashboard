@@ -1,3 +1,5 @@
+#pragma once
+
 // Weather icons for e-paper display
 // Icons are 48x48 pixels, stored as 4-bit grayscale (2 pixels per byte)
 // 0x0 = black, 0xF = white

@@ -34,6 +34,8 @@
 #include "calendar.h"
 #include "display.h"
 #include "ha_client.h"
+#include "mqtt_client.h"
+#include "layout.h"
 #include "quotes.h"
 #include "secrets.h"
 #include "types.h"
@@ -48,11 +50,6 @@
 #include <WiFi.h>
 #include <algorithm>
 #include <vector>
-
-// Shared JSON documents for Home Assistant responses
-// With ArduinoJson v7, JsonDocument manages capacity dynamically.
-JsonDocument haDoc;       // Single-object responses (/api/states, service responses)
-JsonDocument haArrayDoc;  // Larger array responses (calendar, quotes)
 
 // ---------- CONFIG ----------
 
@@ -145,22 +142,9 @@ extern const std::vector<const char *> ENTITY_CALENDARS = {
 #endif
 };
 
-// Update intervals (ms)
-const unsigned long WEATHER_UPDATE_INTERVAL_MS = 60UL * 60UL * 1000UL; // 1 hour
-const unsigned long CAL_TODO_UPDATE_INTERVAL_MS =
-    6UL * 60UL * 60UL * 1000UL; // 6 hours
-const unsigned long QUOTE_ROTATION_INTERVAL_MS =
-    6UL * 60UL * 60UL * 1000UL; // 6 hours
-const unsigned long QUOTE_FETCH_INTERVAL_MS =
-    24UL * 60UL * 60UL * 1000UL; // 24 hours (fetch new quotes once per day)
-const unsigned long MIDNIGHT_CHECK_INTERVAL_MS = 60UL * 1000UL; // check once per minute
-const unsigned long OTA_WINDOW_MS = 5UL * 60UL * 1000UL; // OTA enabled for 5 minutes after button press
-
 // ---------- Data Structures ----------
 // Core data types are defined in types.h
 BatteryData batteryInfo = {0.0, 0};
-const unsigned long BATTERY_UPDATE_INTERVAL_MS =
-    10UL * 60UL * 1000UL; // Update every 10 minutes
 int vref = 1100;   // Reference voltage in mV (will be calibrated from eFuse if
                    // available)
 
@@ -177,51 +161,6 @@ void initCollections() {
   calendarEvents.reserve(16);   // A week of events across calendars
   quotes.reserve(64);           // Daily quotes cache
 }
-
-// ---------- Layout ----------
-// Screen is 960x540
-// Layout:
-//   ┌──────────────────────────────────────┐
-//   │ DATE (left)             WEATHER (right) │
-//   │ "Quote of the day..."                  │
-//   ├────────────────┬───────────────────────┤
-//   │   TODO LIST    │      UPCOMING         │
-//   │   □ Task 1     │   1/15 10:00          │
-//   │   □ Task 2     │     Meeting title...  │
-//   │   ☑ Task 3     │   ...                 │
-//   └────────────────┴───────────────────────┘
-
-// Top Header - Date and Weather (Screen: 960x540)
-const Rect_t clockArea = {.x = 20,
-                          .y = 20,
-                          .width = 120,
-                          .height = 35}; // Used for date display (clock removed)
-const Rect_t weatherArea = {.x = 820,
-                            .y = 20,
-                            .width = 120,
-                            .height = 35}; // Weather in top right
-const Rect_t quoteArea = {
-    .x = 20,
-    .y = 60,
-    .width = 920,
-    .height = 70}; // Full width for daily quote (quote only, no author)
-
-// Middle Section - Todo (left half) and UPCOMING Calendar (right half) side by
-// side. Content spans roughly y=135..520 for tighter vertical fit.
-const Rect_t todoHeaderArea = {
-    .x = 20, .y = 135, .width = 450, .height = 40}; // Left half
-const Rect_t todoListArea = {
-    .x = 20,
-    .y = 175,
-    .width = 450,
-    .height = 345}; // Left half - ends near y=520
-const Rect_t calendarHeaderArea = {
-    .x = 490, .y = 135, .width = 450, .height = 40}; // Right half
-const Rect_t calendarListArea = {
-    .x = 490,
-    .y = 175,
-    .width = 450,
-    .height = 345}; // Right half - ends near y=520
 
 // ---------- Globals ----------
 unsigned long lastWeatherUpdate = 0;
@@ -851,10 +790,37 @@ void setup() {
   updateDate(); // Initialize date display and tracking
 
   // Initial Fetch and full dashboard draw
+  // Data source: MQTT retained messages (if USE_MQTT=1) with REST API fallback
+#if USE_MQTT
+  {
+    MqttPayload mqttWeather, mqttTodos, mqttCalendar, mqttQuotes;
+    bool mqttOk = mqttFetchAll(MQTT_TOPIC_PREFIX, 10000,
+                                mqttWeather, mqttTodos,
+                                mqttCalendar, mqttQuotes);
+    if (mqttOk) {
+      Serial.println("MQTT data source active, falling back to REST where needed");
+      if (!mqttWeather.received  || !parseMqttWeather(mqttWeather.payload, currentWeather))
+        fetchWeather(currentWeather);
+      if (!mqttTodos.received    || !parseMqttTodos(mqttTodos.payload, todoList))
+        fetchTodos(todoList);
+      if (!mqttCalendar.received || !parseMqttCalendar(mqttCalendar.payload, calendarEvents))
+        fetchCalendar(calendarEvents);
+      if (!mqttQuotes.received   || !parseMqttQuotes(mqttQuotes.payload, quotes, currentQuoteIndex))
+        fetchQuotes(quotes, currentQuoteIndex);
+    } else {
+      Serial.println("MQTT unavailable, using REST API");
+      fetchWeather(currentWeather);
+      fetchTodos(todoList);
+      fetchCalendar(calendarEvents);
+      fetchQuotes(quotes, currentQuoteIndex);
+    }
+  }
+#else
   fetchWeather(currentWeather);
   fetchTodos(todoList);
   fetchCalendar(calendarEvents);
   fetchQuotes(quotes, currentQuoteIndex);
+#endif
 
   drawDashboard();
 
@@ -887,6 +853,9 @@ void setup() {
     esp_deep_sleep_start();
   } else {
     Serial.println("Debug/OTA mode active - staying awake and running loop().");
+#if USE_MQTT
+    mqttPersistentBegin(MQTT_TOPIC_PREFIX);
+#endif
   }
 }
 
@@ -933,6 +902,52 @@ void loop() {
   if (!otaEnabled) {
     disableWiFiIfAllowed();
   }
+
+  // ---------- MQTT push updates (debug mode only) ----------
+#if USE_MQTT
+  mqttPersistentLoop();
+
+  // Process any pushed data – immediate update regardless of polling interval
+  {
+    WeatherData newWeather;
+    if (mqttPersistentGetWeather(newWeather)) {
+      currentWeather = newWeather;
+      Serial.println("MQTT push: weather updated");
+      updateWeatherSection();
+      lastWeatherUpdate = millis(); // reset the polling timer
+    }
+
+    bool todosUpdated = false;
+    std::vector<TodoItem> newTodos;
+    if (mqttPersistentGetTodos(newTodos)) {
+      todoList = newTodos;
+      Serial.println("MQTT push: todos updated");
+      todosUpdated = true;
+    }
+    bool calendarUpdated = false;
+    std::vector<CalendarEvent> newCalendar;
+    if (mqttPersistentGetCalendar(newCalendar)) {
+      calendarEvents = newCalendar;
+      Serial.println("MQTT push: calendar updated");
+      calendarUpdated = true;
+    }
+    if (todosUpdated || calendarUpdated) {
+      updateCalendarTodoSections();
+      lastCalTodoUpdate = millis();
+    }
+
+    std::vector<QuoteData> newQuotes;
+    int newIndex = 0;
+    if (mqttPersistentGetQuotes(newQuotes, newIndex)) {
+      quotes = newQuotes;
+      currentQuoteIndex = newIndex;
+      Serial.println("MQTT push: quotes updated");
+      redrawQuoteSection();
+      lastQuoteFetch = millis();
+    }
+  }
+#endif
+  // ---------- end MQTT push ----------
 
   unsigned long now = millis();
   bool lowBatteryMode =
@@ -1016,15 +1031,12 @@ void loop() {
     lastBatteryUpdate = now;
 
     Serial.println("=== Battery Reading (no display update) ===");
-    epd_poweron();
-    delay(10);
     batteryInfo = readBattery();
     Serial.print("Battery: ");
     Serial.print(batteryInfo.voltage, 3);
     Serial.print("V (");
     Serial.print(batteryInfo.percentage);
     Serial.println("%)");
-    epd_poweroff();
   }
 
   delay(1000);

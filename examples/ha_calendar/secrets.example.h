@@ -11,3 +11,9 @@
 
 // OTA password (must match OTA_PASSWORD in .platformio_env for uploads)
 #define OTA_PASSWORD_VALUE "CHANGE_ME_OTA_PASSWORD"
+
+// MQTT Broker (for MQTT data source mode)
+#define MQTT_BROKER_HOST   HA_HOST_ADDR  // Usually the same as your HA server
+#define MQTT_BROKER_PORT   1883
+#define MQTT_USERNAME      ""            // Leave empty if no auth
+#define MQTT_PASSWORD      ""

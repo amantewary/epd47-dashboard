@@ -5,33 +5,31 @@
 #include "types.h"
 #include <ArduinoJson.h>
 
-extern JsonDocument haDoc;
 void disableWiFiIfAllowed();
 
 bool fetchWeather(WeatherData &currentWeather) {
+  JsonDocument doc;
   Serial.println("=== fetchWeather() called ===");
   String url = buildHaUrl(String("/api/states/") + String(ENTITY_WEATHER));
   Serial.print("Weather URL: ");
   Serial.println(url);
 
-  haDoc.clear();
-
-  if (!fetchJson(url, haDoc)) {
+  if (!fetchJson(url, doc)) {
     Serial.println("ERROR: Weather fetch failed - fetchJson returned false");
     return false;
   }
 
   Serial.println("Weather JSON fetched successfully");
 
-  const char *state = haDoc["state"];
+  const char *state = doc["state"];
   WeatherData newWeather;
 
   // Check if temperature exists and is valid
-  if (!haDoc["attributes"]["temperature"].is<float>()) {
+  if (!doc["attributes"]["temperature"].is<float>()) {
     Serial.println("WARNING: Temperature not found or invalid in JSON");
     newWeather.temperature = "-- C";
   } else {
-    float temp = haDoc["attributes"]["temperature"];
+    float temp = doc["attributes"]["temperature"];
     float displayTemp = temp;
     const char *unit = " C";
     if (USE_FAHRENHEIT) {

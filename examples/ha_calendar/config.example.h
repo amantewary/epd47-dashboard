@@ -35,3 +35,11 @@
 
 // Deep sleep interval (minutes) when running in battery-optimized mode
 #define SLEEP_INTERVAL_MINUTES 15
+
+// MQTT mode – set to 0 to use the original HA REST API polling,
+// or 1 to receive entity state via MQTT retained messages.
+#define USE_MQTT          0
+
+// MQTT topic prefix – the device subscribes to {prefix}/weather,
+// {prefix}/todos, {prefix}/calendar, and {prefix}/quotes.
+#define MQTT_TOPIC_PREFIX "epd47"

@@ -7,7 +7,6 @@
 #include <algorithm>
 #include <time.h>
 
-extern JsonDocument haArrayDoc;
 extern const std::vector<const char *> ENTITY_CALENDARS;
 
 void disableWiFiIfAllowed();
@@ -38,7 +37,6 @@ static bool calendarsEqual(const std::vector<CalendarEvent> &a,
 bool fetchCalendar(std::vector<CalendarEvent> &calendarEvents) {
   Serial.println("=== fetchCalendar() called ===");
   std::vector<CalendarEvent> newEvents;
-  haArrayDoc.clear();
 
   // Get current time and end time (7 days later)
   time_t now;
@@ -72,9 +70,9 @@ bool fetchCalendar(std::vector<CalendarEvent> &calendarEvents) {
 
     Serial.print("Fetching Calendar URL: ");
     Serial.println(url);
-    haArrayDoc.clear();
+    JsonDocument doc;
 
-    if (!fetchJson(url, haArrayDoc)) {
+    if (!fetchJson(url, doc)) {
       Serial.print("ERROR: Failed to fetch calendar: ");
       Serial.println(entity);
       Serial.print("URL was: ");
@@ -86,13 +84,13 @@ bool fetchCalendar(std::vector<CalendarEvent> &calendarEvents) {
     Serial.println(">>> fetchJson succeeded");
 
     // Check if we got valid calendar data
-    if (!haArrayDoc.is<JsonArray>()) {
+    if (!doc.is<JsonArray>()) {
       Serial.print("WARNING: Calendar response was not an array for entity: ");
       Serial.println(entity);
       Serial.print("Response type: ");
-      if (haArrayDoc.is<JsonObject>()) {
+      if (doc.is<JsonObject>()) {
         Serial.println("Object (unexpected)");
-        serializeJson(haArrayDoc, Serial);
+        serializeJson(doc, Serial);
         Serial.println();
       } else {
         Serial.println("Unknown");
@@ -104,8 +102,8 @@ bool fetchCalendar(std::vector<CalendarEvent> &calendarEvents) {
     Serial.println(entity);
 
     // The API returns a JSON Array of events directly
-    if (haArrayDoc.is<JsonArray>()) {
-      JsonArray events = haArrayDoc.as<JsonArray>();
+    if (doc.is<JsonArray>()) {
+      JsonArray events = doc.as<JsonArray>();
       Serial.print(">>> Found ");
       Serial.print(events.size());
       Serial.print(" events in ");
@@ -138,9 +136,9 @@ bool fetchCalendar(std::vector<CalendarEvent> &calendarEvents) {
       Serial.print("ERROR: Calendar response was not an array for ");
       Serial.println(entity);
       Serial.print("Response type: ");
-      if (haArrayDoc.is<JsonObject>()) {
+      if (doc.is<JsonObject>()) {
         Serial.println("Object");
-        serializeJson(haArrayDoc, Serial);
+        serializeJson(doc, Serial);
         Serial.println();
       } else {
         Serial.println("Unknown");

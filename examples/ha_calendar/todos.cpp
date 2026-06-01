@@ -6,7 +6,6 @@
 #include <ArduinoJson.h>
 #include <time.h>
 
-extern JsonDocument haDoc;
 extern const std::vector<const char *> ENTITY_TODOS;
 
 void disableWiFiIfAllowed();
@@ -46,7 +45,6 @@ bool fetchTodos(std::vector<TodoItem> &todoList) {
 
   std::vector<TodoItem> overdueTodos;
   std::vector<TodoItem> todayTodos;
-  haDoc.clear(); // Reuse shared document for service response
 
   for (const char *entity : ENTITY_TODOS) {
     String url = buildHaUrl(
@@ -55,12 +53,11 @@ bool fetchTodos(std::vector<TodoItem> &todoList) {
     String payload = String("{\"entity_id\": \"") + entity +
                      "\", \"status\": \"needs_action\"}";
 
-    haDoc.clear();
-
-    if (!fetchJsonPost(url, payload, haDoc))
+    JsonDocument doc;
+    if (!fetchJsonPost(url, payload, doc))
       continue;
 
-    JsonArray items = haDoc["service_response"][entity]["items"];
+    JsonArray items = doc["service_response"][entity]["items"];
     if (items.isNull()) {
       continue;
     }

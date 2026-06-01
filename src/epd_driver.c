@@ -299,7 +299,7 @@ void IRAM_ATTR calc_epd_input_1bpp(uint8_t *line_data, uint8_t *epd_input,
 }
 
 
-inline uint32_t min(uint32_t x, uint32_t y)
+static inline uint32_t min_u32(uint32_t x, uint32_t y)
 {
     return x < y ? x : y;
 }
@@ -771,7 +771,7 @@ void IRAM_ATTR epd_draw_frame_1bit(Rect_t area, uint8_t *ptr,
                 line_bytes += area.x / 8;
             }
             line_bytes =
-                min(line_bytes, EPD_WIDTH / 8 - (uint32_t)(buf_start - line));
+                min_u32(line_bytes, EPD_WIDTH / 8 - (uint32_t)(buf_start - line));
             memcpy(buf_start, ptr, line_bytes);
             ptr += ceil_byte_width;
 
@@ -792,7 +792,7 @@ void IRAM_ATTR epd_draw_frame_1bit(Rect_t area, uint8_t *ptr,
                 shifted = true;
                 bit_shift_buffer_right(
                     buf_start,
-                    min(line_bytes + 1,
+                    min_u32(line_bytes + 1,
                         (uint32_t)line + EPD_WIDTH / 8 - (uint32_t)buf_start),
                     area.x % 8);
             }
@@ -1038,7 +1038,7 @@ static void IRAM_ATTR provide_out(OutputParams *params)
                 line_bytes += area.x / 2;
             }
             line_bytes =
-                min(line_bytes, EPD_WIDTH / 2 - (uint32_t)(buf_start - line));
+                min_u32(line_bytes, EPD_WIDTH / 2 - (uint32_t)(buf_start - line));
             memcpy(buf_start, ptr, line_bytes);
             ptr += area.width / 2 + area.width % 2;
 
@@ -1052,7 +1052,7 @@ static void IRAM_ATTR provide_out(OutputParams *params)
                 shifted = true;
                 // shift one nibble to right
                 nibble_shift_buffer_right(
-                    buf_start, min(line_bytes + 1, (uint32_t)line + EPD_WIDTH / 2 -
+                    buf_start, min_u32(line_bytes + 1, (uint32_t)line + EPD_WIDTH / 2 -
                                                        (uint32_t)buf_start));
             }
             lp = (uint32_t *)line;

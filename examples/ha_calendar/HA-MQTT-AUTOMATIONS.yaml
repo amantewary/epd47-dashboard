@@ -1,0 +1,196 @@
+# =============================================================================
+# Home Assistant Automations – EPD47 MQTT Data Publisher
+# =============================================================================
+# Paste each automation into HA Settings → Automations → "Add Automation"
+# → "Edit in YAML"
+#
+# Prerequisites:
+#   1. MQTT broker configured (Settings → Add-ons → Mosquitto broker)
+#   2. Each topic uses retain: true so the device gets data immediately on wake
+#
+# Topic prefix:  epd47  (must match MQTT_TOPIC_PREFIX in config.h)
+# =============================================================================
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 1. WEATHER
+# ──────────────────────────────────────────────────────────────────────────────
+# Publishes on state change and on HA restart.
+# Firmware expects:  {"state":"partlycloudy","temperature":22.5}
+#
+alias: "EPD47 - Weather"
+description: "Publish weather state to MQTT"
+trigger:
+  - platform: state
+    entity_id: weather.toronto_forecast
+  - platform: homeassistant
+    event: start
+condition: []
+action:
+  - service: mqtt.publish
+    data:
+      topic: epd47/weather
+      payload: >
+        {{ {
+          'state': states('weather.toronto_forecast'),
+          'temperature': state_attr('weather.toronto_forecast', 'temperature')
+        } | tojson }}
+      retain: true
+      qos: 1
+mode: single
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 2. QUOTES
+# ──────────────────────────────────────────────────────────────────────────────
+# Publishes once per day + on HA restart.
+# Firmware expects:  [{"title":"Albert Einstein","summary":"Imagination..."}]
+# Handles both "quotes" and "entries" attribute keys.
+#
+alias: "EPD47 - Quotes"
+description: "Publish quote-of-the-day to MQTT"
+trigger:
+  - platform: time
+    at: "00:05:00"
+  - platform: homeassistant
+    event: start
+condition: []
+action:
+  - service: mqtt.publish
+    data:
+      topic: epd47/quotes
+      payload: >
+        {% set q = state_attr('sensor.quote_of_the_day', 'quotes')
+                   or state_attr('sensor.quote_of_the_day', 'entries')
+                   or [] %}
+        {{ q | tojson }}
+      retain: true
+      qos: 1
+mode: single
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 3. TODOS  (single merged automation – queries all entities at once)
+# ──────────────────────────────────────────────────────────────────────────────
+# Firmware expects:  [{"summary":"Buy milk","due":"2026-05-31T23:59:00","status":"needs_action"}]
+#
+alias: "EPD47 - Todos"
+description: "Publish merged todo items to MQTT"
+trigger:
+  - platform: time_pattern
+    minutes: "/30"
+  - platform: homeassistant
+    event: start
+action:
+  - service: todo.get_items
+    target:
+      entity_id: todo.errands_2
+    data:
+      status: needs_action
+    response_variable: _t1
+  - service: todo.get_items
+    target:
+      entity_id: todo.growth_2
+    data:
+      status: needs_action
+    response_variable: _t2
+  - service: todo.get_items
+    target:
+      entity_id: todo.personal_2
+    data:
+      status: needs_action
+    response_variable: _t3
+  - service: todo.get_items
+    target:
+      entity_id: todo.inbox_2
+    data:
+      status: needs_action
+    response_variable: _t4
+  - service: todo.get_items
+    target:
+      entity_id: todo.work_2
+    data:
+      status: needs_action
+    response_variable: _t5
+  - service: mqtt.publish
+    data:
+      topic: epd47/todos
+      payload: >
+        {{ (_t1['todo.errands_2']['items'] +
+             _t2['todo.growth_2']['items'] +
+             _t3['todo.personal_2']['items'] +
+             _t4['todo.inbox_2']['items'] +
+             _t5['todo.work_2']['items']) | tojson }}
+      retain: true
+      qos: 1
+mode: single
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 4. CALENDAR  (single merged automation – queries all entities at once)
+# ──────────────────────────────────────────────────────────────────────────────
+# Firmware expects:  [{"summary":"Meeting","start":"2026-06-01T09:00:00"}]
+#
+alias: "EPD47 - Calendar"
+description: "Publish merged calendar events to MQTT"
+trigger:
+  - platform: time_pattern
+    minutes: "/30"
+  - platform: homeassistant
+    event: start
+action:
+  - service: calendar.get_events
+    target:
+      entity_id: calendar.home_2
+    data:
+      start_date_time: "{{ now().isoformat() }}"
+      end_date_time: "{{ (now() + timedelta(days=7)).isoformat() }}"
+    response_variable: _c1
+  - service: calendar.get_events
+    target:
+      entity_id: calendar.home_assistant_ms365_calendar
+    data:
+      start_date_time: "{{ now().isoformat() }}"
+      end_date_time: "{{ (now() + timedelta(days=7)).isoformat() }}"
+    response_variable: _c2
+  - service: calendar.get_events
+    target:
+      entity_id: calendar.home_assistant_ms365_family
+    data:
+      start_date_time: "{{ now().isoformat() }}"
+      end_date_time: "{{ (now() + timedelta(days=7)).isoformat() }}"
+    response_variable: _c3
+  - service: calendar.get_events
+    target:
+      entity_id: calendar.home_assistant_ms365_home
+    data:
+      start_date_time: "{{ now().isoformat() }}"
+      end_date_time: "{{ (now() + timedelta(days=7)).isoformat() }}"
+    response_variable: _c4
+  - service: calendar.get_events
+    target:
+      entity_id: calendar.home_assistant_ms365_work
+    data:
+      start_date_time: "{{ now().isoformat() }}"
+      end_date_time: "{{ (now() + timedelta(days=7)).isoformat() }}"
+    response_variable: _c5
+  - service: calendar.get_events
+    target:
+      entity_id: calendar.family_calendar
+    data:
+      start_date_time: "{{ now().isoformat() }}"
+      end_date_time: "{{ (now() + timedelta(days=7)).isoformat() }}"
+    response_variable: _c6
+  - service: mqtt.publish
+    data:
+      topic: epd47/calendar
+      payload: >
+        {{ (_c1['calendar.home_2']['events'] +
+             _c2['calendar.home_assistant_ms365_calendar']['events'] +
+             _c3['calendar.home_assistant_ms365_family']['events'] +
+             _c4['calendar.home_assistant_ms365_home']['events'] +
+             _c5['calendar.home_assistant_ms365_work']['events'] +
+             _c6['calendar.family_calendar']['events']) | tojson }}
+      retain: true
+      qos: 1
+mode: single

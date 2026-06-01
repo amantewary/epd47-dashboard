@@ -175,6 +175,15 @@ pio run -e T5-ePaper-S3-OTA -t upload
 
 The script `extra_scripts/load_env.py` automatically loads your IP and password from `.platformio_env`.
 
+### MQTT Automations
+
+If you want the firmware to read Home Assistant state from retained MQTT topics instead of REST polling:
+
+1. Enable `USE_MQTT` in `examples/ha_calendar/config.h`.
+2. Use `bash scripts/create_ha_automation.sh` to print the paste-ready YAML.
+3. Or run `python3 scripts/create_ha_automations.py --yaml` directly if you want the same output without the shell wrapper.
+4. Copy the generated automations from `examples/ha_calendar/HA-MQTT-AUTOMATIONS.yaml` if you prefer a static reference.
+
 ### Home Assistant Setup
 
 #### Quote Sensor (Optional)

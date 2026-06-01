@@ -9,7 +9,6 @@
 #include <algorithm>
 
 // External state and helpers provided by the main sketch
-extern JsonDocument haArrayDoc;
 void disableWiFiIfAllowed();
 std::vector<String> wrapText(const String &text, int maxChars);
 void epd_poweron();
@@ -29,14 +28,13 @@ static bool quotesEqual(const std::vector<QuoteData> &a,
 }
 
 bool fetchQuotes(std::vector<QuoteData> &quotes, int &currentQuoteIndex) {
+  JsonDocument doc;
   Serial.println("=== fetchQuotes() called ===");
   String url = buildHaUrl(String("/api/states/") + String(ENTITY_QUOTE));
   Serial.print("Quote URL: ");
   Serial.println(url);
 
-  haArrayDoc.clear();
-
-  if (!fetchJson(url, haArrayDoc)) {
+  if (!fetchJson(url, doc)) {
     Serial.println("ERROR: Quote fetch failed - fetchJson returned false");
     return false;
   }
@@ -44,9 +42,9 @@ bool fetchQuotes(std::vector<QuoteData> &quotes, int &currentQuoteIndex) {
   Serial.println("Quote JSON fetched successfully");
 
   // Parse the quotes/entries array from attributes (accept both keys)
-  JsonArray entries = haArrayDoc["attributes"]["quotes"].as<JsonArray>();
+  JsonArray entries = doc["attributes"]["quotes"].as<JsonArray>();
   if (entries.isNull()) {
-    entries = haArrayDoc["attributes"]["entries"].as<JsonArray>();
+    entries = doc["attributes"]["entries"].as<JsonArray>();
   }
   if (entries.isNull()) {
     Serial.println("ERROR: No 'quotes' or 'entries' array found in attributes");

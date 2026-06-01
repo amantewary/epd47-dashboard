@@ -167,7 +167,6 @@ web-app/
 │   └── Quote.tsx          # Quote display
 ├── lib/                   # Utilities
 │   ├── ha-client.ts       # Home Assistant client
-│   ├── ota-client.ts      # OTA update client
 │   └── types.ts           # TypeScript types
 └── public/                # Static assets
 ```
